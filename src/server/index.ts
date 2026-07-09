@@ -1,5 +1,6 @@
 import net from "net";
-const store = new Map<string, string>();
+import { set, get, del } from "../store/hashtable";
+
 const PORT = 5000;
 
 const server = net.createServer((socket) => {
@@ -16,40 +17,40 @@ const server = net.createServer((socket) => {
       buffer = buffer.slice(newlineIndex + 1);
 
       const parts = line.trim().split(" ");
-const command = parts[0];
-const args = parts.slice(1);
+      const command = parts[0];
+      const args = parts.slice(1);
 
-switch (command) {
-  case "SET": {
-    const key = args[0];
-    const value = args[1];
-    store.set(key, value);
-    console.log(`SET ${key} = ${value}`);
-    socket.write("+OK\n");
-    break;
-  }
-  case "GET": {
-    const key = args[0];
-    const value = store.get(key);
-    console.log(`GET ${key} -> ${value}`);
-    if (value === undefined) {
-      socket.write("$-1\n");
-    } else {
-      socket.write(`$${value}\n`);
-    }
-    break;
-  }
-  case "DEL": {
-    const key = args[0];
-    store.delete(key);
-    console.log(`DEL ${key}`);
-    socket.write("+OK\n");
-    break;
-  }
-  default: {
-    socket.write(`-ERR unknown command '${command}'\n`);
-  }
-}
+      switch (command) {
+        case "SET": {
+          const key = args[0];
+          const value = args[1];
+          set(key, value);
+          console.log(`SET ${key} = ${value}`);
+          socket.write("+OK\n");
+          break;
+        }
+        case "GET": {
+          const key = args[0];
+          const value = get(key);
+          console.log(`GET ${key} -> ${value}`);
+          if (value === undefined) {
+            socket.write("$-1\n");
+          } else {
+            socket.write(`$${value}\n`);
+          }
+          break;
+        }
+        case "DEL": {
+          const key = args[0];
+          del(key);
+          console.log(`DEL ${key}`);
+          socket.write("+OK\n");
+          break;
+        }
+        default: {
+          socket.write(`-ERR unknown command '${command}'\n`);
+        }
+      }
     }
   });
 

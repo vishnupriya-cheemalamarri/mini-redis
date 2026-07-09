@@ -59,8 +59,7 @@ function del(key: string): void {
       return;
     }
   }
-  // if not found, do nothing — DEL is a no-op on missing keys, matching
-  // our protocol spec and real Redis behavior
+  // if not found, do nothing — matches DEL behavior in our protocol spec
 }
 
 export { set, get, del };
