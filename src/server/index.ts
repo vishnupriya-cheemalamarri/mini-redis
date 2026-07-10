@@ -1,9 +1,18 @@
 import net from "net";
 import { LRUCache } from "../store/lru";
-
-const cache = new LRUCache(3); // small capacity so we can watch eviction happen
+import { LFUCache } from "../store/lfu";
 
 const PORT = 5000;
+const CAPACITY = 3;
+
+// Pick eviction policy via command line: npm run dev -- lfu
+const policy = process.argv[2] || "lru";
+
+const cache = policy === "lfu"
+  ? new LFUCache(CAPACITY)
+  : new LRUCache(CAPACITY);
+
+console.log(`Using eviction policy: ${policy.toUpperCase()}`);
 
 const server = net.createServer((socket) => {
   console.log("Client connected");
