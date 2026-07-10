@@ -1,5 +1,7 @@
 import net from "net";
-import { set, get, del } from "../store/hashtable";
+import { LRUCache } from "../store/lru";
+
+const cache = new LRUCache(3); // small capacity so we can watch eviction happen
 
 const PORT = 5000;
 
@@ -24,14 +26,14 @@ const server = net.createServer((socket) => {
         case "SET": {
           const key = args[0];
           const value = args[1];
-          set(key, value);
+          cache.set(key, value);
           console.log(`SET ${key} = ${value}`);
           socket.write("+OK\n");
           break;
         }
         case "GET": {
           const key = args[0];
-          const value = get(key);
+          const value = cache.get(key);
           console.log(`GET ${key} -> ${value}`);
           if (value === undefined) {
             socket.write("$-1\n");
@@ -42,7 +44,7 @@ const server = net.createServer((socket) => {
         }
         case "DEL": {
           const key = args[0];
-          del(key);
+          cache.delete(key);
           console.log(`DEL ${key}`);
           socket.write("+OK\n");
           break;
