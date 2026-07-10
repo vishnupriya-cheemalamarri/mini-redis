@@ -1,6 +1,7 @@
 import net from "net";
 import { LRUCache } from "../store/lru";
 import { LFUCache } from "../store/lfu";
+import { appendToLog, readLog } from "../wal/wal";
 
 const PORT = 5000;
 const CAPACITY = 3;
@@ -13,6 +14,22 @@ const cache = policy === "lfu"
   : new LRUCache(CAPACITY);
 
 console.log(`Using eviction policy: ${policy.toUpperCase()}`);
+
+function applyCommand(command: string, args: string[]): void {
+  switch (command) {
+    case "SET": {
+      const key = args[0];
+      const value = args[1];
+      cache.set(key, value);
+      break;
+    }
+    case "DEL": {
+      const key = args[0];
+      cache.delete(key);
+      break;
+    }
+  }
+}
 
 const server = net.createServer((socket) => {
   console.log("Client connected");
@@ -35,7 +52,8 @@ const server = net.createServer((socket) => {
         case "SET": {
           const key = args[0];
           const value = args[1];
-          cache.set(key, value);
+          appendToLog(`SET ${key} ${value}`);
+          applyCommand(command, args);
           console.log(`SET ${key} = ${value}`);
           socket.write("+OK\n");
           break;
@@ -53,7 +71,8 @@ const server = net.createServer((socket) => {
         }
         case "DEL": {
           const key = args[0];
-          cache.delete(key);
+          appendToLog(`DEL ${key}`);
+          applyCommand(command, args);
           console.log(`DEL ${key}`);
           socket.write("+OK\n");
           break;
@@ -69,6 +88,16 @@ const server = net.createServer((socket) => {
     console.log("Client disconnected");
   });
 });
+
+// Replay the WAL to restore state from before any crash/restart
+const loggedCommands = readLog();
+for (const entry of loggedCommands) {
+  const parts = entry.trim().split(" ");
+  const command = parts[0];
+  const args = parts.slice(1);
+  applyCommand(command, args);
+}
+console.log(`Replayed ${loggedCommands.length} commands from WAL`);
 
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
